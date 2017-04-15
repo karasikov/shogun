@@ -31,4 +31,12 @@
 #include <shogun/mathematics/linalg/eigsolver/LanczosEigenSolver.h>
 
 #include <shogun/mathematics/linalg/ratapprox/logdet/LogDetEstimator.h>
+
+#include <shogun/mathematics/ajd/ApproxJointDiagonalizer.h>
+#include <shogun/mathematics/ajd/FFDiag.h>
+#include <shogun/mathematics/ajd/JADiag.h>
+#include <shogun/mathematics/ajd/JADiagOrth.h>
+#include <shogun/mathematics/ajd/JediDiag.h>
+#include <shogun/mathematics/ajd/QDiag.h>
+#include <shogun/mathematics/ajd/UWedge.h>
 %}
