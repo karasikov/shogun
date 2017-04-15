@@ -12,8 +12,11 @@ using namespace Eigen;
 void getW(float64_t *C, int *ptN, int *ptK, float64_t *W);
 
 SGMatrix<float64_t> CFFDiag::diagonalize(SGNDArray<float64_t> C0, SGMatrix<float64_t> V0,
-						double eps, int itermax)
+						double eps, int itermax, int verbose,
+						const char* file_name)
 {
+	MethodProfiler profiler(C0, verbose, file_name);
+    
 	int n = C0.dims[0];
 	int K = C0.dims[2];
 
@@ -22,7 +25,7 @@ SGMatrix<float64_t> CFFDiag::diagonalize(SGNDArray<float64_t> C0, SGMatrix<float
 	C_dims[1] = C0.dims[1];
 	C_dims[2] = C0.dims[2];
 	SGNDArray<float64_t> C(C_dims,3);
-	sg_memcpy(C.array, C0.array, C0.dims[0]*C0.dims[1]*C0.dims[2]*sizeof(float64_t));
+	memcpy(C.array, C0.array, C0.dims[0]*C0.dims[1]*C0.dims[2]*sizeof(float64_t));
 
 	SGMatrix<float64_t> V;
 	if (V0.num_rows == n && V0.num_cols == n)
@@ -32,12 +35,13 @@ SGMatrix<float64_t> CFFDiag::diagonalize(SGNDArray<float64_t> C0, SGMatrix<float
 
 	MatrixXd Id(n,n); Id.setIdentity();
 	Map<MatrixXd> EV(V.matrix,n,n);
-
+    
 	float64_t inum = 0;
 	float64_t df = 1;
 	std::vector<float64_t> crit;
 	while (df > eps && inum < itermax)
 	{
+        double t0 = clock();
 		MatrixXd W = MatrixXd::Zero(n,n);
 
 		getW(C.get_matrix(0),
@@ -67,7 +71,16 @@ SGMatrix<float64_t> CFFDiag::diagonalize(SGNDArray<float64_t> C0, SGMatrix<float
 			Map<MatrixXd> C0i(C0.get_matrix(i), n, n);
 			MatrixXd F = EV * C0i * EV.transpose();
 			f += (F.transpose() * F).diagonal().sum() - F.array().pow(2).matrix().diagonal().sum();
-		}
+/*
+			float64_t sum1 = 0;
+
+			for (int i = 0; i < 10; i++)
+			{
+				f += (F.transpose() * F).diagonal()[i] - F.array().pow(2).matrix().diagonal()[i];
+			}
+*/
+            
+        }
 
 		crit.push_back(f);
 
@@ -75,6 +88,9 @@ SGMatrix<float64_t> CFFDiag::diagonalize(SGNDArray<float64_t> C0, SGMatrix<float
 			df = CMath::abs(crit[inum-1]-crit[inum]);
 
 		inum++;
+
+        double t1 = clock();
+        profiler.iteration(inum, V, df);
 	}
 
 	if (inum == itermax)

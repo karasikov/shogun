@@ -13,7 +13,8 @@ void jadiagw(float64_t c[], float64_t w[], int *ptn, int *ptm, float64_t a[],
 	         float64_t *logdet, float64_t *decr, float64_t *result);
 
 SGMatrix<float64_t> CJADiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64_t> V0,
-						double eps, int itermax)
+						double eps, int itermax, int verbose,
+						const char* file_name)
 {
 	int d = C.dims[0];
 	int L = C.dims[2];
@@ -30,8 +31,17 @@ SGMatrix<float64_t> CJADiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float6
 
 		for (int j = 0; j < d; j++)
 		{
-			if (D(j,j) < 0)
+            // 1e-9 = do not fail on zero eigenvalues
+			if (D(j,j) < 0 && abs(D(j, j)) > 1e-9)
 			{
+				if ((verbose == 1) || (verbose == 2))
+				{
+					printf("found %d pseudo-eigenvalues:\n", d);
+					for (int ji = 0; ji < d; ji++)
+						printf("eig_%d = %g\n", ji, D(ji, ji));
+					printf("error on eigenvalue %d\n", j);
+				}
+
 				SG_SERROR("Input Matrix %d is not Positive-definite\n", i)
 			}
 		}
@@ -58,8 +68,12 @@ SGMatrix<float64_t> CJADiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float6
 	float64_t logdet = log(5.184e17);
 	float64_t result = 0;
 	std::vector<float64_t> crit;
+    
+	MethodProfiler profiler(C, verbose, file_name);
+    
 	while (decr > eps && iter < itermax)
 	{
+		//double t0 = clock();
 		if(logdet == 0)// is NA
 		{
 			SG_SERROR("log det does not exist\n")
@@ -76,6 +90,8 @@ SGMatrix<float64_t> CJADiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float6
 
 		crit.push_back(result);
 		iter = iter + 1;
+
+        profiler.iteration(iter, V, decr);
 	}
 
 	if (iter == itermax)

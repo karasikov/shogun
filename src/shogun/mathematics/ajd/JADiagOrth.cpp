@@ -15,7 +15,8 @@ void right_rot_stack(float64_t *A, int M, int N, int K, int p, int q, float64_t 
 void left_rot_simple(float64_t *A, int m, int n, int p, int q, float64_t c, float64_t s);
 
 SGMatrix<float64_t> CJADiagOrth::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64_t> V0,
-						double eps, int itermax)
+						double eps, int itermax, int verbose,
+						const char* file_name)
 {
 	int m = C.dims[0];
 	int L = C.dims[2];
@@ -28,10 +29,16 @@ SGMatrix<float64_t> CJADiagOrth::diagonalize(SGNDArray<float64_t> C, SGMatrix<fl
 
 	bool more = true;
 	int rots = 0;
+    
+	MethodProfiler profiler(C, verbose, file_name);
 
-	while (more)
+	int iteration = 0;
+	while (more && iteration < itermax)
 	{
+        double t0 = clock();
 		more = false;
+
+		float64_t maxTheta = 0;
 
 		for (int p = 0; p < m; p++)
 		{
@@ -39,6 +46,7 @@ SGMatrix<float64_t> CJADiagOrth::diagonalize(SGNDArray<float64_t> C, SGMatrix<fl
 			{
 				// computation of Givens angle
 				float64_t theta = givens_stack(C.array, m, L, p, q);
+				maxTheta = std::max(maxTheta, fabs(theta));
 
 				// Givens update
 				if (fabs(theta) > eps)
@@ -53,6 +61,9 @@ SGMatrix<float64_t> CJADiagOrth::diagonalize(SGNDArray<float64_t> C, SGMatrix<fl
 				}
 			}
 		}
+
+		iteration++;
+        profiler.iteration(iteration, V, maxTheta);
 	}
 
     return V;

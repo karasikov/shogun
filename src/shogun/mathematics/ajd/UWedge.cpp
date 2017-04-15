@@ -10,7 +10,7 @@ using namespace shogun;
 using namespace Eigen;
 
 SGMatrix<float64_t> CUWedge::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64_t> V0,
-					double eps, int itermax)
+					double eps, int itermax, bool verbose)
 {
 	int d = C.dims[0];
 	int L = C.dims[2];
@@ -57,7 +57,7 @@ SGMatrix<float64_t> CUWedge::diagonalize(SGNDArray<float64_t> C, SGMatrix<float6
 	Cs_dims[1] = d;
 	Cs_dims[2] = L;
 	SGNDArray<float64_t> Cs(Cs_dims,3);
-	sg_memcpy(Cs.array, C.array, Cs.dims[0]*Cs.dims[1]*Cs.dims[2]*sizeof(float64_t));
+	memcpy(Cs.array, C.array, Cs.dims[0]*Cs.dims[1]*Cs.dims[2]*sizeof(float64_t));
 
 	MatrixXd Rs(d,L);
 	std::vector<float64_t> crit;
@@ -76,6 +76,7 @@ SGMatrix<float64_t> CUWedge::diagonalize(SGNDArray<float64_t> C, SGMatrix<float6
 	float64_t improve = 10;
 	while (improve > eps && iter < itermax)
 	{
+		double t0 = clock();
 		MatrixXd B = Rs * Rs.transpose();
 
 		MatrixXd C1 = MatrixXd::Zero(d,d);
@@ -110,6 +111,11 @@ SGMatrix<float64_t> CUWedge::diagonalize(SGNDArray<float64_t> C, SGMatrix<float6
 
 		improve = CMath::abs(crit.back() - crit[iter]);
 		iter++;
+
+		double t1 = clock();
+
+		if (verbose)
+			printf("iteration %g done in %.3f s, improve %g eps %g\n", iter, (t1 - t0) * 1.0 / CLOCKS_PER_SEC, improve, eps);
 	}
 
 	if (iter == itermax)
