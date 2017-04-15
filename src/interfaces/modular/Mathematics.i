@@ -224,3 +224,20 @@ namespace shogun
 %include <shogun/mathematics/linalg/eigsolver/LanczosEigenSolver.h>
 
 %include <shogun/mathematics/linalg/ratapprox/logdet/LogDetEstimator.h>
+
+/* AJD */
+%rename(ApproxJointDiagonalizer) CApproxJointDiagonalizer;
+%rename(FFDiag) CFFDiag;
+%rename(JADiag) CJADiag;
+%rename(JADiagOrth) CJADiagOrth;
+%rename(JediDiag) CJediDiag;
+%rename(QDiag) CQDiag;
+%rename(UWedge) CUWedge;
+%include <shogun/mathematics/ajd/ApproxJointDiagonalizer.h>
+%include <shogun/mathematics/ajd/FFDiag.h>
+%include <shogun/mathematics/ajd/JADiag.h>
+%include <shogun/mathematics/ajd/JADiagOrth.h>
+%include <shogun/mathematics/ajd/JediDiag.h>
+%include <shogun/mathematics/ajd/QDiag.h>
+%include <shogun/mathematics/ajd/UWedge.h>
+
