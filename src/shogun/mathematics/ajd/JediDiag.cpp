@@ -1,5 +1,4 @@
 #include <shogun/mathematics/ajd/JediDiag.h>
-#include <shogun/lib/memory.h>
 
 
 #include <shogun/base/init.h>
@@ -17,7 +16,8 @@ void iterJDI(float64_t *C, int *pMatSize, int *pMatNumber, int *ptn,int *ptm,
 			float64_t *s_max, float64_t *sh_max, float64_t *A);
 
 SGMatrix<float64_t> CJediDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64_t> V0,
-						double eps, int itermax)
+						double eps, int itermax, int verbose,
+						const char* file_name)
 {
 	int d = C.dims[0];
 	int L = C.dims[2];
@@ -31,6 +31,9 @@ SGMatrix<float64_t> CJediDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<floa
 	int iter = 0;
 	float64_t sh_max = 1;
 	float64_t s_max = 1;
+    
+	MethodProfiler profiler(C, verbose, file_name, { "s_max", "sh_max" });
+    
 	while (iter < itermax && ( (sh_max>eps) || (s_max>eps) ))
 	{
 		sh_max = 0;
@@ -40,10 +43,18 @@ SGMatrix<float64_t> CJediDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<floa
 					&s_max, &sh_max,
 					V.matrix);
 		iter++;
-	}
-
-	if (iter == itermax)
-		SG_SERROR("Convergence not reached\n")
+        
+        SGMatrix<float64_t> V_inv = V.clone();
+        // V^-1 is in fact returned by method
+        SGMatrix<float64_t>::inverse(V_inv);
+        
+        profiler.extra_output["s_max"] = s_max;
+        profiler.extra_output["sh_max"] = sh_max;
+        profiler.iteration(iter, V_inv, std::max(s_max, sh_max));
+    }
+    
+    if (iter == itermax)
+        SG_SERROR("Convergence not reached\n")
 
 	Map<MatrixXd> EV(V.matrix,d,d);
 	EV = EV.inverse();
@@ -153,8 +164,8 @@ void iterJDI(float64_t *C, int *pMatSize, int *pMatNumber, int *ptn,int *ptm,
 	eigenvectors.col(1) = eigenvectors.col(1).normalized();
 	eigenvectors.col(2) = eigenvectors.col(2).normalized();
 
-	sg_memcpy(evectors, eigenvectors.data(), 9*sizeof(float64_t));
-	sg_memcpy(evalues, eigenvalues.data(), 3*sizeof(float64_t));
+	memcpy(evectors, eigenvectors.data(), 9*sizeof(float64_t));
+	memcpy(evalues, eigenvalues.data(), 3*sizeof(float64_t));
 
 	float64_t tmp_evec[3],tmp_eval;
 	if (fabs(evalues[1])<fabs(evalues[2]))
@@ -162,27 +173,27 @@ void iterJDI(float64_t *C, int *pMatSize, int *pMatNumber, int *ptn,int *ptm,
 		tmp_eval = evalues[1];
 		evalues[1] = evalues[2];
 		evalues[2] = tmp_eval;
-		sg_memcpy(tmp_evec,&evectors[3],3*sizeof(float64_t));
-		sg_memcpy(&evectors[3],&evectors[6],3*sizeof(float64_t));
-		sg_memcpy(&evectors[6],tmp_evec,3*sizeof(float64_t));
+		memcpy(tmp_evec,&evectors[3],3*sizeof(float64_t));
+		memcpy(&evectors[3],&evectors[6],3*sizeof(float64_t));
+		memcpy(&evectors[6],tmp_evec,3*sizeof(float64_t));
 	}
 	if (fabs(evalues[0])<fabs(evalues[1]))
 	{
 		tmp_eval = evalues[0];
 		evalues[0] = evalues[1];
 		evalues[1] = tmp_eval;
-		sg_memcpy(tmp_evec,evectors,3*sizeof(float64_t));
-		sg_memcpy(evectors,&evectors[3],3*sizeof(float64_t));
-		sg_memcpy(&evectors[3],tmp_evec,3*sizeof(float64_t));
+		memcpy(tmp_evec,evectors,3*sizeof(float64_t));
+		memcpy(evectors,&evectors[3],3*sizeof(float64_t));
+		memcpy(&evectors[3],tmp_evec,3*sizeof(float64_t));
 	}
 	if (fabs(evalues[1])<fabs(evalues[2]))
 	{
 		tmp_eval = evalues[1];
 		evalues[1] = evalues[2];
 		evalues[2] = tmp_eval;
-		sg_memcpy(tmp_evec,&evectors[3],3*sizeof(float64_t));
-		sg_memcpy(&evectors[3],&evectors[6],3*sizeof(float64_t));
-		sg_memcpy(&evectors[6],tmp_evec,3*sizeof(float64_t));
+		memcpy(tmp_evec,&evectors[3],3*sizeof(float64_t));
+		memcpy(&evectors[3],&evectors[6],3*sizeof(float64_t));
+		memcpy(&evectors[6],tmp_evec,3*sizeof(float64_t));
 	}
 
 	float64_t aux[9];

@@ -65,10 +65,129 @@ class CApproxJointDiagonalizer : public CSGObject
 		}
 
 	protected:
-
 		/** the matrix V that best diagonalizes C */
 		SGMatrix<float64_t> m_V;
 
 };
+
 }
+
+
+#include <cmath>
+#include <algorithm>
+#include <numeric>
+#include <stdio.h>
+#include <assert.h>
+#include <map>
+#include <vector>
+#include <string>
+
+namespace shogun
+{
+class MethodProfiler
+{
+public :
+    FILE* detailed_output = 0;
+    int verbose;
+    SGNDArray<float64_t> C;
+    double t_start;
+    double t_last_iteration;
+    std::map<std::string, double> extra_output;
+    int num_extra_params;
+    
+    MethodProfiler(const SGNDArray<float64_t>& C_, int verbose_, const char* file_name, std::vector<std::string> extra_output_cols = {}):
+        verbose(verbose_), C(C_.clone()), t_start(clock()),
+        t_last_iteration(t_start)
+    {
+        for (std::string s: extra_output_cols)
+            extra_output[s] = 0;
+        num_extra_params = extra_output.size();
+        
+        if (verbose == 2)
+        {
+            detailed_output = fopen(file_name, "w");
+	    if (!detailed_output)
+	    {
+		    assert(!"Failed to open output file for method details");
+	    }
+            fprintf(detailed_output, "iteration,time,eps,quality_avg");
+            for (int i = 0; i < C.dims[2]; i++)
+                fprintf(detailed_output, ",quality_%d", i + 1);
+            for (auto it: extra_output)
+                fprintf(detailed_output, ",%s", it.first.c_str());
+            fprintf(detailed_output, "\n");
+            fflush(detailed_output);
+        }
+    }
+    
+    ~MethodProfiler()
+    {
+        if (detailed_output)
+            fclose(detailed_output);
+    }
+    
+    void iteration(int iter, const SGMatrix<float64_t>& V, double eps)
+    {
+        double t_last = t_last_iteration;
+        double t_now = clock();
+    
+        if ((verbose == 1) || (verbose == 2))
+        {
+			printf("iteration %d done in %.3f s, eps %g", iter, (t_now - t_last) * 1.0 / CLOCKS_PER_SEC, eps);
+            for (auto it: extra_output)
+                printf(", %s %g", it.first.c_str(), it.second);
+            printf("\n");
+        }
+	
+        if (verbose == 2)
+        {
+            SGVector<float64_t> quality(C.dims[2]);
+        
+            for (int i = 0; i < C.dims[2]; i++)
+            {
+                SGMatrix<float64_t> A_diag =
+                    SGMatrix<float64_t>::matrix_multiply(V,
+                        SGMatrix<float64_t>::matrix_multiply(SGMatrix<float64_t>(C.get_matrix(i), V.num_cols, V.num_cols, false), V, false, true), false, false);
+                
+                double quality_off = 0;
+                double quality_in = 0;
+                
+                for (int j = 0; j < A_diag.num_rows; j++)
+                {
+                    for (int k = 0; k < A_diag.num_cols; k++)
+                    {
+                        if (k == j) quality_in += std::abs(A_diag(j, k));
+                        else quality_off += std::abs(A_diag(j, k));
+                    }
+                }
+                
+                quality[i] = quality_in / (quality_in + quality_off);
+            }
+            
+            printf("iteration %d quality: ", iter);
+            for (int i = 0; i < C.dims[2]; i++)
+            {
+                printf("%.3f ", quality[i]);
+            }
+            printf("\n");
+            
+            // iteration, time, eps, quality average, detailed quality list, detailed eps
+            fprintf(detailed_output, "%d,%g,%g,%g",
+                iter, (t_now - t_start) * 1.0 / CLOCKS_PER_SEC, eps,
+                std::accumulate(quality.data(), quality.data() + C.dims[2], 0.0) / (double)C.dims[2]);
+            
+            for (int i = 0; i < C.dims[2]; i++)
+                fprintf(detailed_output, ",%g", quality[i]);
+            
+            assert((int)extra_output.size() == num_extra_params);
+            for (auto it: extra_output)
+                fprintf(detailed_output, ",%g", it.second);
+            fprintf(detailed_output, "\n");
+            fflush(detailed_output);
+        }
+    }
+};
+}
+
+
 #endif //APPROXJOINTDIAGONALIZER_H_

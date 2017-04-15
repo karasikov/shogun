@@ -10,7 +10,7 @@ using namespace shogun;
 using namespace Eigen;
 
 SGMatrix<float64_t> CQDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64_t> V0,
-						double eps, int itermax)
+						double eps, int itermax, bool verbose)
 {
 	int N = C.dims[0];
 	int T = C.dims[2];
@@ -81,6 +81,7 @@ SGMatrix<float64_t> CQDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64
 	std::vector<float64_t> crit;
 	while ( iter < itermax && deltacrit > eps )
 	{
+        double t0 = clock();
 		float64_t delta_w = 0.0;
 
 		for (int i = 0; i < N; i++)
@@ -163,6 +164,10 @@ SGMatrix<float64_t> CQDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<float64
 			deltacrit = CMath::abs( crit[iter] - crit[iter-1] );
 
 		iter++;
+
+        double t1 = clock();
+        if (verbose)
+            printf("iteration %d done in %.3f, deltacrit %g, eps %g\n", iter, (t1 - t0) * 1.0 / CLOCKS_PER_SEC, deltacrit, eps);
 	}
 
 	EV = (P.transpose() * EV).transpose();
