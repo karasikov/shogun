@@ -54,7 +54,8 @@ SGMatrix<float64_t> CJediDiag::diagonalize(SGNDArray<float64_t> C, SGMatrix<floa
     }
     
     if (iter == itermax)
-        SG_SERROR("Convergence not reached\n")
+        printf("Convergence not reached\n");
+        //SG_SERROR("Convergence not reached\n")
 
 	Map<MatrixXd> EV(V.matrix,d,d);
 	EV = EV.inverse();

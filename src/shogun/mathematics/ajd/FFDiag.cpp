@@ -94,7 +94,8 @@ SGMatrix<float64_t> CFFDiag::diagonalize(SGNDArray<float64_t> C0, SGMatrix<float
 	}
 
 	if (inum == itermax)
-		SG_SERROR("Convergence not reached\n")
+        printf("Convergence not reached\n");
+		//SG_SERROR("Convergence not reached\n")
 
 	return V;
 
